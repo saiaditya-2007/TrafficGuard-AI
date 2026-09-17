@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { INCIDENTS } from '../data/mockData';
+import React, { useEffect, useState } from 'react';
+
 import EvidenceViewer from '../components/EvidenceViewer';
 import type { Incident } from '../types';
 import { Filter, AlertTriangle, Camera, Shield, MapPin, Clock } from 'lucide-react';
@@ -22,15 +22,73 @@ function getStatusClass(s: string) {
 
 export default function IncidentsPage() {
   const [selected, setSelected] = useState<Incident | null>(null);
-  const [incidents, setIncidents] = useState(INCIDENTS);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+
+  useEffect(() => {
+    fetch('https://trafficguard-ai-backend.onrender.com/api/incidents')
+      .then(res => res.json())
+      .then(data => {
+        const backendIncidents: Incident[] = data.incidents.map((item: any) => ({
+          id: item.id,
+          type: item.violation,
+          severity: String(item.severity).toUpperCase() as Incident['severity'],
+          location: item.location,
+          area: item.location.split(',')[0],
+          coordinates: [17.385, 78.4867],
+          time: item.timestamp?.split(' ')[1]?.slice(0, 5) ?? '--:--',
+          timestamp: item.timestamp,
+          aiConfidence: 94,
+          trustScore: 90,
+          cameraCount: 1,
+          status: item.status,
+          description: `${item.violation} detected at ${item.location}`,
+          trustBreakdown: {
+            imageQuality: 87,
+            aiConfidence: 94,
+            locationConsistency: 91,
+            timestampIntegrity: 98,
+            multiCameraConfirmation: 82
+          },
+          timeline: []
+        }));
+
+        setIncidents(backendIncidents);
+      })
+      .catch(error => {
+        console.error('Failed to load incidents:', error);
+      });
+  }, []);
   const [filterSeverity, setFilterSeverity] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [filterType, setFilterType] = useState('ALL');
   const [search, setSearch] = useState('');
 
-  const handleVerify = (id: string) => {
-    setIncidents(prev => prev.map(i => i.id === id ? { ...i, status: 'Verified' as const } : i));
-    setSelected(null);
+  const handleVerify = async (id: string) => {
+    try {
+      const res = await fetch(`https://trafficguard-ai-backend.onrender.com/api/incidents/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'Verified' }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to verify incident');
+      }
+
+      setIncidents(prev =>
+        prev.map(i =>
+          i.id === id ? { ...i, status: 'Verified' } : i
+        )
+      );
+
+      setSelected(null);
+    } catch (error) {
+      console.error('Failed to verify incident:', error);
+    }
   };
 
   const filtered = incidents.filter(inc => {
@@ -38,8 +96,8 @@ export default function IncidentsPage() {
     if (filterStatus !== 'ALL' && inc.status !== filterStatus) return false;
     if (filterType !== 'ALL' && !inc.type.includes(filterType)) return false;
     if (search && !inc.id.toLowerCase().includes(search.toLowerCase()) &&
-        !inc.type.toLowerCase().includes(search.toLowerCase()) &&
-        !inc.area.toLowerCase().includes(search.toLowerCase())) return false;
+      !inc.type.toLowerCase().includes(search.toLowerCase()) &&
+      !inc.area.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
@@ -139,7 +197,7 @@ export default function IncidentsPage() {
                   transition: 'all 0.2s ease',
                   borderLeft: `3px solid ${inc.severity === 'CRITICAL' ? 'var(--crimson)' :
                     inc.severity === 'HIGH' ? 'var(--orange)' :
-                    inc.severity === 'MEDIUM' ? 'var(--amber)' : 'var(--cyan)'}`,
+                      inc.severity === 'MEDIUM' ? 'var(--amber)' : 'var(--cyan)'}`,
                 }}
                 onClick={() => setSelected(inc)}
               >
