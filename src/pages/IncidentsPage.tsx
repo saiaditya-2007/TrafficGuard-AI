@@ -53,6 +53,7 @@ export default function IncidentsPage() {
         }));
 
         setIncidents(backendIncidents);
+        console.log('TRAFFICGUARD INCIDENTS:', backendIncidents);
       })
       .catch(error => {
         console.error('Failed to load incidents:', error);
