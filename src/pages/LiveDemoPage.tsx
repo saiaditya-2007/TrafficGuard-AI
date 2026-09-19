@@ -192,6 +192,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [stage, setStage] = useState<'searching' | 'vehicle_detected' | 'anpr_reading' | 'violation_confirmed'>('searching');
   const [anprScanned, setAnprScanned] = useState<boolean>(false);
   const [ocrText, setOcrText] = useState<string>('TS 09 -- ----');
   const [shutterFlash, setShutterFlash] = useState<boolean>(false);
@@ -207,6 +208,25 @@ export default function LiveDemoPage({ onNavigate }: Props) {
 
   const activeScenario = SCENARIOS.find(s => s.id === activeScenarioId) || SCENARIOS[0];
 
+  const handleSelectScenario = (id: string) => {
+    setActiveScenarioId(id);
+    setStage('searching');
+    setAnprScanned(false);
+    setOcrText('TS 09 -- ----');
+    setEvidencePacket(null);
+    setDispatched(false);
+  };
+
+  const handleToggleCameraMode = () => {
+    const nextMode = cameraMode === 'patrol' ? 'webcam' : 'patrol';
+    setCameraMode(nextMode);
+    setStage('searching');
+    setAnprScanned(false);
+    setOcrText(nextMode === 'webcam' ? 'AWAITING TARGET' : 'TS 09 -- ----');
+    setEvidencePacket(null);
+    setDispatched(false);
+  };
+
   // Dynamic speed oscillation to simulate patrol vehicle driving
   useEffect(() => {
     if (!isPlaying) return;
@@ -220,31 +240,55 @@ export default function LiveDemoPage({ onNavigate }: Props) {
     return () => clearInterval(interval);
   }, [isPlaying]);
 
-  // ANPR Letter decipher animation
+  // Realistic Simulation Lifecycle:
+  // 1. Searching (camera shows open road, awaiting vehicle detection)
+  // 2. Vehicle appears in camera frame & AI acquires target
+  // 3. ANPR scanner locks onto plate & deciphers registration characters
+  // 4. Violation confirmed (telemetry/challan/fine calculated)
   useEffect(() => {
-    if (!isPlaying) return;
-    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const target = activeScenario.numberPlate;
-    let step = 0;
-    const interval = setInterval(() => {
-      step++;
-      if (step < 6) {
-        // Scrambling
-        const scrambled = target.split('').map((c, i) => {
-          if (c === ' ' || i < 2) return c;
-          return chars[Math.floor(Math.random() * chars.length)];
-        }).join('');
-        setOcrText(scrambled);
-        setAnprScanned(false);
-      } else {
-        setOcrText(target);
-        setAnprScanned(true);
-        if (soundEnabled && step === 6) sfx.playLockOn();
-      }
-    }, 250);
+    if (!isPlaying || cameraMode === 'webcam') {
+      return;
+    }
 
-    return () => clearInterval(interval);
-  }, [activeScenario, isPlaying, soundEnabled]);
+    if (stage === 'searching') {
+      const t = setTimeout(() => {
+        setStage('vehicle_detected');
+      }, 2200);
+      return () => clearTimeout(t);
+    }
+
+    if (stage === 'vehicle_detected') {
+      const t = setTimeout(() => {
+        setStage('anpr_reading');
+      }, 1600);
+      return () => clearTimeout(t);
+    }
+
+    if (stage === 'anpr_reading') {
+      const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const target = activeScenario.numberPlate;
+      let step = 0;
+      const interval = setInterval(() => {
+        step++;
+        if (step < 6) {
+          const scrambled = target.split('').map((c, i) => {
+            if (c === ' ' || i < 2) return c;
+            return chars[Math.floor(Math.random() * chars.length)];
+          }).join('');
+          setOcrText(scrambled);
+          setAnprScanned(false);
+        } else {
+          setOcrText(target);
+          setAnprScanned(true);
+          if (soundEnabled) sfx.playLockOn();
+          clearInterval(interval);
+          setStage('violation_confirmed');
+        }
+      }, 220);
+
+      return () => clearInterval(interval);
+    }
+  }, [stage, isPlaying, cameraMode, activeScenario, soundEnabled]);
 
   // Webcam handling
   useEffect(() => {
@@ -315,20 +359,28 @@ export default function LiveDemoPage({ onNavigate }: Props) {
     }, 400);
   }, [activeScenario, isCapturing, soundEnabled]);
 
-  // Auto patrol timer countdown
+  // Auto patrol progression
   useEffect(() => {
     if (!autoPatrol) return;
+    if (stage !== 'violation_confirmed') return;
+
     const interval = setInterval(() => {
       setAutoCountdown(prev => {
         if (prev <= 1) {
           handleCaptureEvidence();
-          return 7;
+          setTimeout(() => {
+            const currentIdx = SCENARIOS.findIndex(s => s.id === activeScenarioId);
+            const nextIdx = (currentIdx + 1) % SCENARIOS.length;
+            setActiveScenarioId(SCENARIOS[nextIdx].id);
+          }, 3500);
+          return 5;
         }
         return prev - 1;
       });
     }, 1000);
+
     return () => clearInterval(interval);
-  }, [autoPatrol, handleCaptureEvidence]);
+  }, [autoPatrol, stage, handleCaptureEvidence, activeScenarioId]);
 
   const handleDispatch = () => {
     setDispatched(true);
@@ -340,7 +392,11 @@ export default function LiveDemoPage({ onNavigate }: Props) {
     }
   };
 
-  const currentSpeed = Math.round(activeScenario.patrolSpeed + speedVariation);
+  const cruisingSpeed = Math.round(activeScenario.speedLimit * 0.8 + speedVariation);
+  const violationSpeed = Math.round(activeScenario.patrolSpeed + speedVariation);
+  const currentSpeed = (stage === 'violation_confirmed' && cameraMode !== 'webcam')
+    ? violationSpeed
+    : cruisingSpeed;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto', background: 'var(--bg-base)' }}>
@@ -416,7 +472,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
 
           {/* Camera feed mode */}
           <button
-            onClick={() => setCameraMode(cameraMode === 'patrol' ? 'webcam' : 'patrol')}
+            onClick={handleToggleCameraMode}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               background: cameraMode === 'webcam' ? 'rgba(59, 130, 246, 0.2)' : 'var(--bg-surface)',
@@ -448,11 +504,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
             {SCENARIOS.map(scen => (
               <button
                 key={scen.id}
-                onClick={() => {
-                  setActiveScenarioId(scen.id);
-                  setEvidencePacket(null);
-                  setDispatched(false);
-                }}
+                onClick={() => handleSelectScenario(scen.id)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8,
                   padding: '8px 14px', borderRadius: 6,
@@ -492,14 +544,33 @@ export default function LiveDemoPage({ onNavigate }: Props) {
               />
             ) : (
               <img
-                src={activeScenario.vehicleImage}
+                src={stage === 'searching' ? '/assets/evidence/empty_patrol_road.jpg' : activeScenario.vehicleImage}
                 alt="Front Dashcam Patrol Feed"
                 style={{
                   width: '100%', height: '100%', objectFit: 'cover',
                   filter: isPlaying ? 'contrast(1.05) brightness(0.95)' : 'grayscale(0.4) contrast(0.9)',
-                  transition: 'filter 0.3s ease'
+                  transition: 'filter 0.3s ease, opacity 0.3s ease'
                 }}
               />
+            )}
+
+            {/* Status indicator when awaiting vehicle detection */}
+            {(stage === 'searching' || cameraMode === 'webcam') && (
+              <div style={{
+                position: 'absolute', top: 54, left: '50%', transform: 'translateX(-50%)',
+                background: 'rgba(2, 6, 23, 0.88)', border: '1px solid rgba(56, 189, 248, 0.4)',
+                color: '#38bdf8', padding: '6px 18px', borderRadius: 20,
+                fontFamily: 'var(--font-mono)', fontSize: '0.74rem', fontWeight: 600,
+                display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(6px)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.6)', pointerEvents: 'none', zIndex: 10
+              }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#38bdf8', animation: 'pulse-slow 1.5s infinite' }} />
+                <span>
+                  {cameraMode === 'webcam'
+                    ? 'WEBCAM ACTIVE — AWAITING VEHICLE DETECTION'
+                    : 'PATROL RADAR: SCANNING SECTOR — AWAITING VEHICLE DETECTION'}
+                </span>
+              </div>
             )}
 
             {/* Ambient Dashcam Windshield Horizon & Grid Overlay */}
@@ -553,80 +624,96 @@ export default function LiveDemoPage({ onNavigate }: Props) {
               }} />
             </div>
 
-            {/* DYNAMIC AI TARGET VEHICLE BOUNDING BOX */}
-            <div style={{
-              position: 'absolute',
-              left: `${activeScenario.vehicleCoordinates.x}%`,
-              top: `${activeScenario.vehicleCoordinates.y}%`,
-              width: `${activeScenario.vehicleCoordinates.width}%`,
-              height: `${activeScenario.vehicleCoordinates.height}%`,
-              border: '2px solid #ef4444',
-              borderRadius: 6,
-              boxShadow: '0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 15px rgba(239, 68, 68, 0.1)',
-              pointerEvents: 'none',
-              transition: 'all 0.3s ease'
-            }}>
-              {/* Corner brackets */}
-              <div style={{ position: 'absolute', top: -3, left: -3, width: 12, height: 12, borderTop: '3px solid #fff', borderLeft: '3px solid #fff' }} />
-              <div style={{ position: 'absolute', top: -3, right: -3, width: 12, height: 12, borderTop: '3px solid #fff', borderRight: '3px solid #fff' }} />
-              <div style={{ position: 'absolute', bottom: -3, left: -3, width: 12, height: 12, borderBottom: '3px solid #fff', borderLeft: '3px solid #fff' }} />
-              <div style={{ position: 'absolute', bottom: -3, right: -3, width: 12, height: 12, borderBottom: '3px solid #fff', borderRight: '3px solid #fff' }} />
-
-              {/* Target Label */}
+            {/* DYNAMIC AI TARGET VEHICLE BOUNDING BOX — ONLY WHEN VEHICLE VISIBLE IN FRAME */}
+            {cameraMode !== 'webcam' && stage !== 'searching' && (
               <div style={{
-                position: 'absolute', top: -26, left: 0,
-                background: 'rgba(239, 68, 68, 0.9)', color: '#fff',
-                fontFamily: 'var(--font-mono)', fontSize: '0.68rem', fontWeight: 700,
-                padding: '2px 8px', borderRadius: 4, letterSpacing: '0.04em',
-                display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap'
+                position: 'absolute',
+                left: `${activeScenario.vehicleCoordinates.x}%`,
+                top: `${activeScenario.vehicleCoordinates.y}%`,
+                width: `${activeScenario.vehicleCoordinates.width}%`,
+                height: `${activeScenario.vehicleCoordinates.height}%`,
+                border: stage === 'violation_confirmed' ? '2px solid #ef4444' : '2px solid #06b6d4',
+                borderRadius: 6,
+                boxShadow: stage === 'violation_confirmed'
+                  ? '0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 15px rgba(239, 68, 68, 0.1)'
+                  : '0 0 15px rgba(6, 182, 212, 0.4), inset 0 0 15px rgba(6, 182, 212, 0.1)',
+                pointerEvents: 'none',
+                transition: 'all 0.3s ease'
               }}>
-                <ShieldAlert size={12} />
-                <span>{activeScenario.violationType.toUpperCase()} — {activeScenario.aiConfidence}%</span>
-              </div>
-            </div>
+                {/* Corner brackets */}
+                <div style={{ position: 'absolute', top: -3, left: -3, width: 12, height: 12, borderTop: '3px solid #fff', borderLeft: '3px solid #fff' }} />
+                <div style={{ position: 'absolute', top: -3, right: -3, width: 12, height: 12, borderTop: '3px solid #fff', borderRight: '3px solid #fff' }} />
+                <div style={{ position: 'absolute', bottom: -3, left: -3, width: 12, height: 12, borderBottom: '3px solid #fff', borderLeft: '3px solid #fff' }} />
+                <div style={{ position: 'absolute', bottom: -3, right: -3, width: 12, height: 12, borderBottom: '3px solid #fff', borderRight: '3px solid #fff' }} />
 
-            {/* HIGH-PRECISION ANPR LICENSE PLATE TARGET SCANNER */}
-            <div style={{
-              position: 'absolute',
-              left: `${activeScenario.plateCoordinates.x}%`,
-              top: `${activeScenario.plateCoordinates.y}%`,
-              width: `${activeScenario.plateCoordinates.width}%`,
-              height: `${activeScenario.plateCoordinates.height}%`,
-              border: '2px solid #06b6d4',
-              borderRadius: 4,
-              boxShadow: '0 0 12px rgba(6, 182, 212, 0.7)',
-              background: 'rgba(6, 182, 212, 0.15)',
-              pointerEvents: 'none',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              {/* Animated laser scanline traversing plate */}
-              {isPlaying && (
+                {/* Target Label */}
                 <div style={{
-                  position: 'absolute', left: 0, right: 0, height: 2,
-                  background: 'linear-gradient(90deg, transparent, #38bdf8, #fff, #38bdf8, transparent)',
-                  boxShadow: '0 0 8px #38bdf8',
-                  animation: 'scannerMove 1.4s ease-in-out infinite alternate'
-                }} />
-              )}
-
-              {/* ANPR decoded label hanging underneath plate */}
-              <div style={{
-                position: 'absolute', bottom: -28,
-                background: 'rgba(2, 6, 23, 0.95)', border: '1px solid #06b6d4',
-                color: '#fff', fontFamily: 'var(--font-mono)', fontSize: '0.72rem',
-                fontWeight: 800, padding: '2px 8px', borderRadius: 4,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.8)', letterSpacing: '0.08em',
-                display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap'
-              }}>
-                <span style={{
-                  width: 6, height: 6, borderRadius: '50%',
-                  background: anprScanned ? '#10b981' : '#f59e0b',
-                  boxShadow: anprScanned ? '0 0 6px #10b981' : '0 0 6px #f59e0b'
-                }} />
-                <span>ANPR: {ocrText}</span>
-                <span style={{ fontSize: '0.62rem', color: '#06b6d4' }}>({activeScenario.plateConfidence}%)</span>
+                  position: 'absolute', top: -26, left: 0,
+                  background: stage === 'violation_confirmed' ? 'rgba(239, 68, 68, 0.9)' : 'rgba(6, 182, 212, 0.9)',
+                  color: '#fff',
+                  fontFamily: 'var(--font-mono)', fontSize: '0.68rem', fontWeight: 700,
+                  padding: '2px 8px', borderRadius: 4, letterSpacing: '0.04em',
+                  display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap'
+                }}>
+                  {stage === 'violation_confirmed' ? (
+                    <>
+                      <ShieldAlert size={12} />
+                      <span>{activeScenario.violationType.toUpperCase()} — {activeScenario.aiConfidence}%</span>
+                    </>
+                  ) : (
+                    <>
+                      <Car size={12} />
+                      <span>TARGET ACQUIRED: {activeScenario.violatorVehicle.toUpperCase()}</span>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* HIGH-PRECISION ANPR LICENSE PLATE TARGET SCANNER — ONLY WHEN SCANNING OR CONFIRMED */}
+            {cameraMode !== 'webcam' && (stage === 'anpr_reading' || stage === 'violation_confirmed') && (
+              <div style={{
+                position: 'absolute',
+                left: `${activeScenario.plateCoordinates.x}%`,
+                top: `${activeScenario.plateCoordinates.y}%`,
+                width: `${activeScenario.plateCoordinates.width}%`,
+                height: `${activeScenario.plateCoordinates.height}%`,
+                border: '2px solid #06b6d4',
+                borderRadius: 4,
+                boxShadow: '0 0 12px rgba(6, 182, 212, 0.7)',
+                background: 'rgba(6, 182, 212, 0.15)',
+                pointerEvents: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {/* Animated laser scanline traversing plate */}
+                {isPlaying && (
+                  <div style={{
+                    position: 'absolute', left: 0, right: 0, height: 2,
+                    background: 'linear-gradient(90deg, transparent, #38bdf8, #fff, #38bdf8, transparent)',
+                    boxShadow: '0 0 8px #38bdf8',
+                    animation: 'scannerMove 1.4s ease-in-out infinite alternate'
+                  }} />
+                )}
+
+                {/* ANPR decoded label hanging underneath plate */}
+                <div style={{
+                  position: 'absolute', bottom: -28,
+                  background: 'rgba(2, 6, 23, 0.95)', border: '1px solid #06b6d4',
+                  color: '#fff', fontFamily: 'var(--font-mono)', fontSize: '0.72rem',
+                  fontWeight: 800, padding: '2px 8px', borderRadius: 4,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.8)', letterSpacing: '0.08em',
+                  display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap'
+                }}>
+                  <span style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: anprScanned ? '#10b981' : '#f59e0b',
+                    boxShadow: anprScanned ? '0 0 6px #10b981' : '0 0 6px #f59e0b'
+                  }} />
+                  <span>ANPR: {ocrText}</span>
+                  <span style={{ fontSize: '0.62rem', color: '#06b6d4' }}>({activeScenario.plateConfidence}%)</span>
+                </div>
+              </div>
+            )}
 
             {/* Bottom HUD: Telemetry readouts */}
             <div style={{
@@ -638,13 +725,23 @@ export default function LiveDemoPage({ onNavigate }: Props) {
               pointerEvents: 'none'
             }}>
               <div style={{ display: 'flex', gap: 14 }}>
-                <span>LIDAR DIST: <strong style={{ color: '#38bdf8' }}>14.2m</strong></span>
+                <span>LIDAR DIST: <strong style={{ color: '#38bdf8' }}>{stage === 'searching' || cameraMode === 'webcam' ? '--' : '14.2m'}</strong></span>
                 <span>FRAME RATE: <strong style={{ color: '#10b981' }}>59.94 FPS</strong></span>
                 <span>OPTICAL ZOOM: <strong style={{ color: '#fff' }}>2.4X</strong></span>
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
-                <span>CHALLAN: <strong style={{ color: '#f59e0b' }}>{activeScenario.challanCode}</strong></span>
-                <span>FINE: <strong style={{ color: '#ef4444' }}>₹{activeScenario.fineAmount}</strong></span>
+                {stage === 'violation_confirmed' && cameraMode !== 'webcam' ? (
+                  <>
+                    <span>CHALLAN: <strong style={{ color: '#f59e0b' }}>{activeScenario.challanCode}</strong></span>
+                    <span>FINE: <strong style={{ color: '#ef4444' }}>₹{activeScenario.fineAmount}</strong></span>
+                  </>
+                ) : (
+                  <span>STATUS: <strong style={{ color: stage === 'searching' || cameraMode === 'webcam' ? '#38bdf8' : '#f59e0b' }}>
+                    {cameraMode === 'webcam' ? 'NO VEHICLE DETECTED' :
+                     stage === 'searching' ? 'AWAITING VEHICLE DETECTION' :
+                     stage === 'vehicle_detected' ? 'PROFILING VEHICLE...' : 'READING ANPR PLATE...'}
+                  </strong></span>
+                )}
               </div>
             </div>
           </div>
@@ -672,8 +769,9 @@ export default function LiveDemoPage({ onNavigate }: Props) {
 
               <button
                 onClick={() => {
-                  setOcrText('TS 09 -- ----');
+                  setStage('searching');
                   setAnprScanned(false);
+                  setOcrText('TS 09 -- ----');
                 }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
@@ -681,29 +779,41 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                   color: 'var(--text-secondary)', padding: '8px 12px', borderRadius: 6,
                   cursor: 'pointer', fontSize: '0.82rem'
                 }}
-                title="Re-run ANPR OCR plate scanner"
+                title="Restart patrol detection cycle"
               >
                 <RefreshCw size={14} />
-                <span>Re-scan Plate</span>
+                <span>Re-scan Sector</span>
               </button>
             </div>
 
             {/* BIG PRIMARY EVIDENCE CAPTURE BUTTON */}
             <button
               onClick={handleCaptureEvidence}
-              disabled={isCapturing}
+              disabled={isCapturing || stage !== 'violation_confirmed' || cameraMode === 'webcam'}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10,
-                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                color: '#fff', border: 'none', padding: '10px 22px', borderRadius: 8,
-                fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer',
-                boxShadow: '0 4px 18px rgba(239, 68, 68, 0.45)',
+                background: (stage === 'violation_confirmed' && cameraMode !== 'webcam')
+                  ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                  : 'rgba(255, 255, 255, 0.08)',
+                color: (stage === 'violation_confirmed' && cameraMode !== 'webcam') ? '#fff' : 'var(--text-muted)',
+                border: (stage === 'violation_confirmed' && cameraMode !== 'webcam') ? 'none' : '1px solid var(--border)',
+                padding: '10px 22px', borderRadius: 8,
+                fontSize: '0.86rem', fontWeight: 700,
+                cursor: (stage === 'violation_confirmed' && cameraMode !== 'webcam') ? 'pointer' : 'not-allowed',
+                boxShadow: (stage === 'violation_confirmed' && cameraMode !== 'webcam') ? '0 4px 18px rgba(239, 68, 68, 0.45)' : 'none',
                 transform: isCapturing ? 'scale(0.98)' : 'scale(1)',
                 transition: 'all 0.15s ease'
               }}
             >
               <Camera size={18} />
-              <span>{isCapturing ? 'CAPTURING EVIDENCE...' : 'RECORD LIVE EVIDENCE SNAPSHOT'}</span>
+              <span>
+                {isCapturing ? 'CAPTURING EVIDENCE...' :
+                 cameraMode === 'webcam' ? 'NO VEHICLE DETECTED' :
+                 stage === 'searching' ? 'AWAITING VEHICLE DETECTION' :
+                 stage === 'vehicle_detected' ? 'VEHICLE ACQUIRED — SCANNING...' :
+                 stage === 'anpr_reading' ? 'READING REGISTRATION PLATE...' :
+                 'RECORD LIVE EVIDENCE SNAPSHOT'}
+              </span>
             </button>
           </div>
 
@@ -982,12 +1092,12 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                 display: 'flex', flexDirection: 'column', gap: 4, width: '100%', textAlign: 'left'
               }}>
                 <div style={{ fontWeight: 700, color: 'var(--cyan)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Sparkles size={13} /> Automatic Pipeline Workflow:
+                  <Sparkles size={13} /> Synchronized Pipeline Workflow:
                 </div>
-                <span>1. Vehicle Bounding Box & Trajectory Prediction</span>
-                <span>2. ANPR Optical Character Deciphering ({activeScenario.numberPlate})</span>
-                <span>3. Optical Shutter Flash & 3-Point Image Freezing</span>
-                <span>4. SHA-256 Hash Tamper Seal & Instant E-Challan Docket</span>
+                <span>1. Patrol Unit scans sector — awaits vehicle detection</span>
+                <span>2. Vehicle enters frame — AI acquires target bounding box</span>
+                <span>3. Optical ANPR scanner deciphers number plate</span>
+                <span>4. Violation flagged & Live Evidence Snapshot captured</span>
               </div>
             </div>
           )}

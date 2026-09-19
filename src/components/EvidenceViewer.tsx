@@ -46,9 +46,16 @@ function getIncidentCameras(incident: Incident) {
   }
   if (incident.type.includes('Helmet')) {
     return [
-      { id: 1, label: 'Camera 01', sub: 'Front Dashcam (V-1042)', img: '/assets/evidence/triple_riding.jpg', camId: 'CAM-208' },
-      { id: 2, label: 'Camera 02', sub: 'Overhead CCTV (CYB-02)', img: '/assets/evidence/inc2_angle_b.jpg', camId: 'NODE-CYB-02' },
-      { id: 3, label: 'Camera 03', sub: 'Rear Camera', img: '/assets/evidence/case_solo_helmet.jpg', camId: 'CAM-089' },
+      { id: 1, label: 'Camera 01', sub: 'School Zone Cam (JH-36)', img: '/assets/evidence/case_solo_helmet.jpg', camId: 'CAM-TB-01' },
+      { id: 2, label: 'Camera 02', sub: 'Street CCTV (Tank Bund-02)', img: '/assets/evidence/case_solo_helmet.jpg', camId: 'NODE-TB-02' },
+      { id: 3, label: 'Camera 03', sub: 'Rear Camera Feed', img: '/assets/evidence/cam2.jpg', camId: 'CAM-089' },
+    ];
+  }
+  if (incident.type.includes('Mobile') || incident.type.includes('Phone')) {
+    return [
+      { id: 1, label: 'Camera 01', sub: 'Cabin Dashcam (V-1042)', img: '/assets/evidence/case_mobile_check.jpg', camId: 'CAM-MOB-01' },
+      { id: 2, label: 'Camera 02', sub: 'Junction Cam (HITEC-02)', img: '/assets/evidence/case_mobile_check.jpg', camId: 'NODE-HITEC-02' },
+      { id: 3, label: 'Camera 03', sub: 'Corridor CCTV Feed', img: '/assets/evidence/cam1.jpg', camId: 'CAM-089' },
     ];
   }
   if (incident.type.includes('Seat Belt')) {
@@ -66,6 +73,26 @@ function getIncidentCameras(incident: Incident) {
 }
 
 function getIncidentAiDetections(incident: Incident) {
+  if (incident.type.includes('Helmet')) {
+    return [
+      { label: 'RIDER WITHOUT HELMET', confidence: '98.5%', class: 'helmet-missing',
+        style: { left: '49%', top: '38%', width: '13%', height: '22%' } },
+      { label: 'MOTORCYCLE DETECTED', confidence: '99.1%', class: 'motorcycle',
+        style: { left: '47%', top: '56%', width: '17%', height: '36%' } },
+      { label: 'ANPR: TS 09 AB 1234', confidence: '99.4%', class: 'signal',
+        style: { left: '56%', top: '69%', width: '6%', height: '3%' } },
+    ];
+  }
+  if (incident.type.includes('Mobile') || incident.type.includes('Phone')) {
+    return [
+      { label: 'MOBILE DEVICE IN USE WHILE DRIVING', confidence: '98.8%', class: 'helmet-missing',
+        style: { left: '46%', top: '58%', width: '10%', height: '30%' } },
+      { label: 'DRIVER DISTRACTION DETECTED', confidence: '97.2%', class: 'signal',
+        style: { left: '68%', top: '65%', width: '18%', height: '25%' } },
+      { label: 'CABIN SENSOR ACTIVE', confidence: '99.0%', class: 'motorcycle',
+        style: { left: '38%', top: '22%', width: '25%', height: '24%' } },
+    ];
+  }
   if (incident.type.includes('Overspeeding')) {
     return [
       { label: 'SEDAN TS 09 UB 7842', confidence: '99.4%', class: 'motorcycle',

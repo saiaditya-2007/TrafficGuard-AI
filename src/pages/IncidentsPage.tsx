@@ -28,29 +28,67 @@ export default function IncidentsPage() {
     fetch('https://trafficguard-ai-backend.onrender.com/api/incidents')
       .then(res => res.json())
       .then(data => {
-        const backendIncidents: Incident[] = data.incidents.map((item: any) => ({
-          id: item.id,
-          type: item.violation,
-          severity: String(item.severity).toUpperCase() as Incident['severity'],
-          location: item.location,
-          area: item.location.split(',')[0],
-          coordinates: [17.385, 78.4867],
-          time: item.timestamp?.split(' ')[1]?.slice(0, 5) ?? '--:--',
-          timestamp: item.timestamp,
-          aiConfidence: 94,
-          trustScore: 90,
-          cameraCount: 1,
-          status: item.status,
-          description: `${item.violation} detected at ${item.location}`,
-          trustBreakdown: {
-            imageQuality: 87,
+        const LOCATION_COORDS: Record<string, [number, number]> = {
+          'Tank Bund': [17.4239, 78.4738],
+          'Hitech City Road': [17.4435, 78.3772],
+          'Hitech City': [17.4435, 78.3772],
+          'Kukatpally': [17.4849, 78.4138],
+        };
+
+        const backendIncidents: Incident[] = data.incidents.map((item: any) => {
+          const areaName = item.location?.split(',')[0]?.trim() || 'Hyderabad';
+          const coords = LOCATION_COORDS[areaName] || [17.385, 78.4867];
+          const timeStr = item.timestamp?.split(' ')[1]?.slice(0, 5) ?? '--:--';
+
+          return {
+            id: item.id,
+            type: item.violation,
+            severity: String(item.severity).toUpperCase() as Incident['severity'],
+            location: item.location,
+            area: areaName,
+            coordinates: coords,
+            time: timeStr,
+            timestamp: item.timestamp,
             aiConfidence: 94,
-            locationConsistency: 91,
-            timestampIntegrity: 98,
-            multiCameraConfirmation: 82
-          },
-          timeline: []
-        }));
+            trustScore: 90,
+            cameraCount: 1,
+            status: item.status,
+            description: `${item.violation} detected at ${item.location}`,
+            trustBreakdown: {
+              imageQuality: 87,
+              aiConfidence: 94,
+              locationConsistency: 91,
+              timestampIntegrity: 98,
+              multiCameraConfirmation: 82
+            },
+            timeline: [
+              {
+                time: item.timestamp?.split(' ')[1] || '18:42:10',
+                icon: 'camera',
+                label: 'CCTV / Patrol camera captured event',
+                description: `Autonomous camera feed recorded ${item.violation} at ${item.location}`
+              },
+              {
+                time: item.timestamp?.split(' ')[1] || '18:42:11',
+                icon: 'cpu',
+                label: 'AI neural network classification',
+                description: `Deep learning model confirmed violation with 94% confidence`
+              },
+              {
+                time: item.timestamp?.split(' ')[1] || '18:42:13',
+                icon: 'shield',
+                label: 'Cryptographic evidence integrity check',
+                description: 'Frame hash and timestamp verified against regional ledger'
+              },
+              {
+                time: item.timestamp?.split(' ')[1] || '18:42:15',
+                icon: 'send',
+                label: 'Queued for Hyderabad Traffic Police review',
+                description: `Incident docket ${item.id} submitted for verification`
+              }
+            ]
+          };
+        });
 
         setIncidents(backendIncidents);
         console.log('TRAFFICGUARD INCIDENTS:', backendIncidents);
