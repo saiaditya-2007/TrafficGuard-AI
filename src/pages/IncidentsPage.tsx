@@ -20,6 +20,81 @@ function getStatusClass(s: string) {
   return map[s] || 'status-pending';
 }
 
+const LOCATION_COORDS: Record<string, [number, number]> = {
+  'Tank Bund': [17.4239, 78.4738],
+  'Hitech City Road': [17.4435, 78.3772],
+  'Hitech City': [17.4435, 78.3772],
+  'Kukatpally': [17.4849, 78.4138],
+  'Outer Ring Road (ORR Gantry #12)': [17.412, 78.324],
+  'Outer Ring Road': [17.412, 78.324],
+  'Ameerpet Commercial Corridor': [17.4375, 78.4482],
+  'Ameerpet': [17.4375, 78.4482],
+  'Begumpet Expressway Flyover Ramp': [17.4447, 78.4664],
+  'Begumpet': [17.4447, 78.4664],
+  'KBR Park Junction Signal': [17.4265, 78.4184],
+  'KBR Park': [17.4265, 78.4184],
+  'Road No. 12, Banjara Hills': [17.4156, 78.4350],
+  'Banjara Hills': [17.4156, 78.4350],
+};
+
+function mapRawToIncident(item: any): Incident {
+  const areaName = item.location?.split(',')[0]?.trim() || 'Hyderabad';
+  const coords = LOCATION_COORDS[areaName] || LOCATION_COORDS[item.location] || [17.385, 78.4867];
+  const timePart = item.timestamp
+    ? (item.timestamp.includes('T') ? item.timestamp.split('T')[1]?.slice(0, 8) : item.timestamp.split(' ')[1])
+    : '';
+  const timeStr = timePart ? timePart.slice(0, 5) : '--:--';
+
+  return {
+    id: item.id,
+    type: item.violation,
+    severity: String(item.severity).toUpperCase() as Incident['severity'],
+    location: item.location,
+    area: areaName,
+    coordinates: coords,
+    time: timeStr,
+    timestamp: item.timestamp,
+    aiConfidence: 94,
+    trustScore: 90,
+    cameraCount: 1,
+    status: item.status,
+    description: `${item.violation} detected at ${item.location}`,
+    trustBreakdown: {
+      imageQuality: 87,
+      aiConfidence: 94,
+      locationConsistency: 91,
+      timestampIntegrity: 98,
+      multiCameraConfirmation: 82
+    },
+    timeline: [
+      {
+        time: timePart || '18:42:10',
+        icon: 'camera',
+        label: 'CCTV / Patrol camera captured event',
+        description: `Autonomous camera feed recorded ${item.violation} at ${item.location}`
+      },
+      {
+        time: timePart || '18:42:11',
+        icon: 'cpu',
+        label: 'AI neural network classification',
+        description: 'Deep learning model confirmed violation with 94% confidence'
+      },
+      {
+        time: timePart || '18:42:13',
+        icon: 'shield',
+        label: 'Cryptographic evidence integrity check',
+        description: 'Frame hash and timestamp verified against regional ledger'
+      },
+      {
+        time: timePart || '18:42:15',
+        icon: 'send',
+        label: 'Queued for Hyderabad Traffic Police review',
+        description: `Incident docket ${item.id} submitted for verification`
+      }
+    ]
+  };
+}
+
 export default function IncidentsPage() {
   const [selected, setSelected] = useState<Incident | null>(null);
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -28,73 +103,60 @@ export default function IncidentsPage() {
     fetch('https://trafficguard-ai-backend.onrender.com/api/incidents')
       .then(res => res.json())
       .then(data => {
-        const LOCATION_COORDS: Record<string, [number, number]> = {
-          'Tank Bund': [17.4239, 78.4738],
-          'Hitech City Road': [17.4435, 78.3772],
-          'Hitech City': [17.4435, 78.3772],
-          'Kukatpally': [17.4849, 78.4138],
-        };
+        let rawList: any[] = Array.isArray(data.incidents) ? data.incidents : [];
+        try {
+          const stored = JSON.parse(sessionStorage.getItem('trafficguard_demo_incidents') || '[]');
+          if (Array.isArray(stored) && stored.length > 0) {
+            const existingIds = new Set(rawList.map((i: any) => i.id));
+            const extra = stored.filter((i: any) => !existingIds.has(i.id));
+            rawList = [...extra, ...rawList];
+          }
+        } catch {
+          // ignore session storage error
+        }
 
-        const backendIncidents: Incident[] = data.incidents.map((item: any) => {
-          const areaName = item.location?.split(',')[0]?.trim() || 'Hyderabad';
-          const coords = LOCATION_COORDS[areaName] || [17.385, 78.4867];
-          const timeStr = item.timestamp?.split(' ')[1]?.slice(0, 5) ?? '--:--';
-
-          return {
-            id: item.id,
-            type: item.violation,
-            severity: String(item.severity).toUpperCase() as Incident['severity'],
-            location: item.location,
-            area: areaName,
-            coordinates: coords,
-            time: timeStr,
-            timestamp: item.timestamp,
-            aiConfidence: 94,
-            trustScore: 90,
-            cameraCount: 1,
-            status: item.status,
-            description: `${item.violation} detected at ${item.location}`,
-            trustBreakdown: {
-              imageQuality: 87,
-              aiConfidence: 94,
-              locationConsistency: 91,
-              timestampIntegrity: 98,
-              multiCameraConfirmation: 82
-            },
-            timeline: [
-              {
-                time: item.timestamp?.split(' ')[1] || '18:42:10',
-                icon: 'camera',
-                label: 'CCTV / Patrol camera captured event',
-                description: `Autonomous camera feed recorded ${item.violation} at ${item.location}`
-              },
-              {
-                time: item.timestamp?.split(' ')[1] || '18:42:11',
-                icon: 'cpu',
-                label: 'AI neural network classification',
-                description: `Deep learning model confirmed violation with 94% confidence`
-              },
-              {
-                time: item.timestamp?.split(' ')[1] || '18:42:13',
-                icon: 'shield',
-                label: 'Cryptographic evidence integrity check',
-                description: 'Frame hash and timestamp verified against regional ledger'
-              },
-              {
-                time: item.timestamp?.split(' ')[1] || '18:42:15',
-                icon: 'send',
-                label: 'Queued for Hyderabad Traffic Police review',
-                description: `Incident docket ${item.id} submitted for verification`
-              }
-            ]
-          };
-        });
-
+        const backendIncidents: Incident[] = rawList.map(mapRawToIncident);
         setIncidents(backendIncidents);
         console.log('TRAFFICGUARD INCIDENTS:', backendIncidents);
       })
       .catch(error => {
         console.error('Failed to load incidents:', error);
+        try {
+          const stored = JSON.parse(sessionStorage.getItem('trafficguard_demo_incidents') || '[]');
+          const defaultItems = [
+            {
+              id: 'TG001',
+              violation: 'No Helmet',
+              vehicleNumber: 'TS09AB1234',
+              location: 'Tank Bund, Hyderabad',
+              status: 'Pending Review',
+              severity: 'Medium',
+              timestamp: '2026-09-16 18:42:10'
+            },
+            {
+              id: 'TG002',
+              violation: 'Using Mobile Phone',
+              vehicleNumber: 'TS10CD5678',
+              location: 'Hitech City Road, Hyderabad',
+              status: 'Verified',
+              severity: 'High',
+              timestamp: '2026-09-16 18:35:24'
+            },
+            {
+              id: 'TG003',
+              violation: 'Triple Riding',
+              vehicleNumber: 'TS08EF9012',
+              location: 'Kukatpally, Hyderabad',
+              status: 'Pending Review',
+              severity: 'High',
+              timestamp: '2026-09-16 18:21:45'
+            }
+          ];
+          const existingIds = new Set(defaultItems.map(i => i.id));
+          const extra = Array.isArray(stored) ? stored.filter((i: any) => !existingIds.has(i.id)) : [];
+          const combined = [...extra, ...defaultItems].map(mapRawToIncident);
+          setIncidents(combined);
+        } catch {}
       });
   }, []);
   const [filterSeverity, setFilterSeverity] = useState('ALL');
@@ -123,6 +185,15 @@ export default function IncidentsPage() {
           i.id === id ? { ...i, status: 'Verified' } : i
         )
       );
+
+      // Also update sessionStorage if present
+      try {
+        const stored = JSON.parse(sessionStorage.getItem('trafficguard_demo_incidents') || '[]');
+        if (Array.isArray(stored)) {
+          const updated = stored.map((item: any) => item.id === id ? { ...item, status: 'Verified' } : item);
+          sessionStorage.setItem('trafficguard_demo_incidents', JSON.stringify(updated));
+        }
+      } catch {}
 
       setSelected(null);
     } catch (error) {

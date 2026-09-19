@@ -329,6 +329,51 @@ export default function LiveDemoPage({ onNavigate }: Props) {
     }, 150);
 
     const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const formattedTimestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const nextNum = Math.floor(4 + Math.random() * 995);
+    const newIncidentId = `TG${nextNum.toString().padStart(3, '0')}`;
+    const severityVal = activeScenario.violationType.includes('Wrong-Side')
+      ? 'Critical'
+      : (activeScenario.violationType.includes('Triple') || activeScenario.violationType.includes('Overspeeding'))
+        ? 'High'
+        : 'Medium';
+
+    const newBackendIncident = {
+      id: newIncidentId,
+      violation: activeScenario.violationType,
+      vehicleNumber: activeScenario.numberPlate,
+      location: activeScenario.location,
+      status: 'Pending Review',
+      severity: severityVal,
+      timestamp: formattedTimestamp
+    };
+
+    // Send newly captured incident to backend
+    fetch('https://trafficguard-ai-backend.onrender.com/api/incidents', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newBackendIncident),
+    })
+      .then(res => res.json())
+      .then(data => {
+        console.log('Created backend incident successfully:', data);
+      })
+      .catch(err => {
+        console.warn('Backend POST note:', err);
+      });
+
+    // Store in session storage for guaranteed immediate synchronization with Incident Feed
+    try {
+      const existing = JSON.parse(sessionStorage.getItem('trafficguard_demo_incidents') || '[]');
+      const updated = [newBackendIncident, ...existing.filter((i: any) => i.id !== newIncidentId)];
+      sessionStorage.setItem('trafficguard_demo_incidents', JSON.stringify(updated));
+    } catch (e) {
+      console.warn('sessionStorage error:', e);
+    }
+
     const packet: LiveEvidencePacket = {
       id: `EV-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`,
       timestamp: now.toLocaleString('en-IN', {
