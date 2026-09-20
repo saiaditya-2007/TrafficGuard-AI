@@ -103,60 +103,15 @@ export default function IncidentsPage() {
     fetch('https://trafficguard-ai-backend.onrender.com/api/incidents')
       .then(res => res.json())
       .then(data => {
-        let rawList: any[] = Array.isArray(data.incidents) ? data.incidents : [];
-        try {
-          const stored = JSON.parse(sessionStorage.getItem('trafficguard_demo_incidents') || '[]');
-          if (Array.isArray(stored) && stored.length > 0) {
-            const existingIds = new Set(rawList.map((i: any) => i.id));
-            const extra = stored.filter((i: any) => !existingIds.has(i.id));
-            rawList = [...extra, ...rawList];
-          }
-        } catch {
-          // ignore session storage error
-        }
-
+        const rawList = Array.isArray(data)
+          ? data
+          : (data && Array.isArray(data.incidents) ? data.incidents : []);
         const backendIncidents: Incident[] = rawList.map(mapRawToIncident);
         setIncidents(backendIncidents);
         console.log('TRAFFICGUARD INCIDENTS:', backendIncidents);
       })
       .catch(error => {
         console.error('Failed to load incidents:', error);
-        try {
-          const stored = JSON.parse(sessionStorage.getItem('trafficguard_demo_incidents') || '[]');
-          const defaultItems = [
-            {
-              id: 'TG001',
-              violation: 'No Helmet',
-              vehicleNumber: 'TS09AB1234',
-              location: 'Tank Bund, Hyderabad',
-              status: 'Pending Review',
-              severity: 'Medium',
-              timestamp: '2026-09-16 18:42:10'
-            },
-            {
-              id: 'TG002',
-              violation: 'Using Mobile Phone',
-              vehicleNumber: 'TS10CD5678',
-              location: 'Hitech City Road, Hyderabad',
-              status: 'Verified',
-              severity: 'High',
-              timestamp: '2026-09-16 18:35:24'
-            },
-            {
-              id: 'TG003',
-              violation: 'Triple Riding',
-              vehicleNumber: 'TS08EF9012',
-              location: 'Kukatpally, Hyderabad',
-              status: 'Pending Review',
-              severity: 'High',
-              timestamp: '2026-09-16 18:21:45'
-            }
-          ];
-          const existingIds = new Set(defaultItems.map(i => i.id));
-          const extra = Array.isArray(stored) ? stored.filter((i: any) => !existingIds.has(i.id)) : [];
-          const combined = [...extra, ...defaultItems].map(mapRawToIncident);
-          setIncidents(combined);
-        } catch {}
       });
   }, []);
   const [filterSeverity, setFilterSeverity] = useState('ALL');
@@ -185,15 +140,6 @@ export default function IncidentsPage() {
           i.id === id ? { ...i, status: 'Verified' } : i
         )
       );
-
-      // Also update sessionStorage if present
-      try {
-        const stored = JSON.parse(sessionStorage.getItem('trafficguard_demo_incidents') || '[]');
-        if (Array.isArray(stored)) {
-          const updated = stored.map((item: any) => item.id === id ? { ...item, status: 'Verified' } : item);
-          sessionStorage.setItem('trafficguard_demo_incidents', JSON.stringify(updated));
-        }
-      } catch {}
 
       setSelected(null);
     } catch (error) {
