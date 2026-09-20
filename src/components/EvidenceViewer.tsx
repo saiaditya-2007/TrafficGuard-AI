@@ -209,11 +209,6 @@ export default function EvidenceViewer({ incident, onClose, onVerify }: Props) {
             <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{incident.id}</span>
             <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{incident.type}</span>
             <span className={`badge ${incident.severity.toLowerCase()}`}>{incident.severity}</span>
-            <span style={{ padding: '2px 8px', 
-              background: 'var(--amber-dim)', borderRadius: '4px', border: '1px solid rgba(245,158,11,0.3)',
-              color: 'var(--amber)', fontWeight: 700, fontSize: '0.6rem' }}>
-              ⚠ SIMULATED DEMO DATA
-            </span>
           </div>
           <button onClick={onClose} style={{
             background: 'none', border: '1px solid var(--border)', borderRadius: '6px',
@@ -274,7 +269,6 @@ export default function EvidenceViewer({ incident, onClose, onVerify }: Props) {
                 </div>
                 <div className="hud-bottom-left">
                   <div style={{ color: 'var(--amber)', fontWeight: 700 }}>● RECORDING</div>
-                  <div style={{ color: 'var(--crimson)', fontWeight: 600, fontSize: '0.6rem', marginTop: 2 }}>SIMULATED DEMO DATA</div>
                 </div>
                 <div className="hud-bottom-right">
                   <div>REC 00:00:07</div>

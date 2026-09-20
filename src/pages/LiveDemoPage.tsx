@@ -329,6 +329,35 @@ export default function LiveDemoPage({ onNavigate }: Props) {
     }, 150);
 
     const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const formattedTimestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const nextNum = Math.floor(4 + Math.random() * 995);
+    const newIncidentId = `TG${nextNum.toString().padStart(3, '0')}`;
+    const severityVal = activeScenario.violationType.includes('Wrong-Side')
+      ? 'Critical'
+      : (activeScenario.violationType.includes('Triple') || activeScenario.violationType.includes('Overspeeding'))
+        ? 'High'
+        : 'Medium';
+
+    const newBackendIncident = {
+      id: newIncidentId,
+      violation: activeScenario.violationType,
+      vehicleNumber: activeScenario.numberPlate,
+      location: activeScenario.location,
+      status: 'Pending Review',
+      severity: severityVal,
+      timestamp: formattedTimestamp
+    };
+
+    fetch('https://trafficguard-ai-backend.onrender.com/api/incidents', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newBackendIncident),
+    }).catch(err => {
+      console.warn('Backend POST note:', err);
+    });
 
     const packet: LiveEvidencePacket = {
       id: `EV-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`,

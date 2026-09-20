@@ -100,7 +100,13 @@ export default function IncidentsPage() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
 
   useEffect(() => {
-    fetch('https://trafficguard-ai-backend.onrender.com/api/incidents')
+    fetch(`https://trafficguard-ai-backend.onrender.com/api/incidents?_t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+      },
+    })
       .then(res => res.json())
       .then(data => {
         const rawList = Array.isArray(data)
@@ -171,7 +177,7 @@ export default function IncidentsPage() {
         <div className="page-header">
           <div>
             <h2>Live Incident Feed</h2>
-            <p>Real-time incoming violations across Hyderabad — <span style={{ color: 'var(--amber)', fontWeight: 600 }}>SIMULATED DEMO DATA</span></p>
+            <p>Real-time incoming violations across Hyderabad</p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
