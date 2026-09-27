@@ -6,6 +6,7 @@ import Header from './components/Header';
 import NotificationDrawer from './components/NotificationDrawer';
 
 import LandingPage from './pages/LandingPage';
+import SignInPage from './pages/SignInPage';
 import CommandCenter from './pages/CommandCenter';
 import IncidentsPage from './pages/IncidentsPage';
 import LiveMapPage from './pages/LiveMapPage';
@@ -20,7 +21,7 @@ import LiveDemoPage from './pages/LiveDemoPage';
 
 import type { NavPage } from './types';
 
-type AppMode = 'landing' | 'police' | 'citizen';
+type AppMode = 'landing' | 'login' | 'police' | 'citizen';
 
 function useClock() {
   const [clock, setClock] = useState(() =>
@@ -39,6 +40,8 @@ export default function App() {
   const [mode, setMode] = useState<AppMode>('landing');
   const [activePage, setActivePage] = useState<NavPage>('overview');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [officer, setOfficer] = useState({ name: 'Officer S. Ravi', division: 'Madhapur Division' });
   const clock = useClock();
 
   const unreadCount = 2;
@@ -46,23 +49,33 @@ export default function App() {
   const handleNavigate = (page: NavPage) => {
     setActivePage(page);
     setShowNotifications(false);
+    setMobileMenuOpen(false);
   };
 
   const handleLaunchCommandCenter = () => {
+    setMode('login');
+    setShowNotifications(false);
+    setMobileMenuOpen(false);
+  };
+
+  const handleDirectPoliceAccess = () => {
     setMode('police');
     setActivePage('overview');
     setShowNotifications(false);
+    setMobileMenuOpen(false);
   };
 
   const handleGoToLanding = () => {
     setMode('landing');
     setActivePage('overview');
     setShowNotifications(false);
+    setMobileMenuOpen(false);
   };
 
   const handleGoToCitizen = () => {
     setMode('citizen');
     setShowNotifications(false);
+    setMobileMenuOpen(false);
   };
 
   // Landing mode
@@ -70,12 +83,29 @@ export default function App() {
     return (
       <LandingPage
         onLaunch={handleLaunchCommandCenter}
+        onOfficerLogin={() => setMode('login')}
         onCitizen={handleGoToCitizen}
         onLiveDemo={() => {
           setMode('police');
           setActivePage('live-demo');
           setShowNotifications(false);
         }}
+      />
+    );
+  }
+
+  // Sign In mode
+  if (mode === 'login') {
+    return (
+      <SignInPage
+        onSuccess={(loggedOfficer) => {
+          setOfficer(loggedOfficer);
+          setMode('police');
+          setActivePage('overview');
+          setShowNotifications(false);
+        }}
+        onBackToLanding={handleGoToLanding}
+        onGoToCitizen={handleGoToCitizen}
       />
     );
   }
@@ -110,6 +140,9 @@ export default function App() {
         activePage={activePage}
         onNavigate={handleNavigate}
         onLanding={handleGoToLanding}
+        mobileOpen={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
+        officer={officer}
       />
 
       <div className="main-area">
@@ -121,13 +154,15 @@ export default function App() {
             setShowNotifications={setShowNotifications}
             unreadCount={unreadCount}
             clock={clock}
+            mobileMenuOpen={mobileMenuOpen}
+            setMobileMenuOpen={setMobileMenuOpen}
           />
           {showNotifications && (
             <NotificationDrawer onClose={() => setShowNotifications(false)} />
           )}
         </div>
 
-        <div className="page-content" style={{ padding: 0, flex: 1, overflow: 'hidden' }}>
+        <div className="page-content" style={{ padding: 0, flex: 1 }}>
           {renderPage()}
         </div>
       </div>

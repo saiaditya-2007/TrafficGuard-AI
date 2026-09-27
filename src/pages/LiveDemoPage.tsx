@@ -2,9 +2,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Camera, Play, Pause, RefreshCw, ShieldAlert,
   Car, CheckCircle2, Send, Download, Volume2, VolumeX, Eye,
-  Compass, Radio, Sparkles, AlertOctagon, Video
+  Compass, Radio, Sparkles, AlertOctagon, Video, Loader2, AlertCircle
 } from 'lucide-react';
 import type { LivePatrolScenario, LiveEvidencePacket } from '../types';
+import { BACKEND_URL } from '../data/api';
 
 interface Props {
   onNavigate?: (page: string) => void;
@@ -199,6 +200,9 @@ export default function LiveDemoPage({ onNavigate }: Props) {
   const [autoPatrol, setAutoPatrol] = useState<boolean>(false);
   const [autoCountdown, setAutoCountdown] = useState<number>(5);
   const [dispatched, setDispatched] = useState<boolean>(false);
+  const [isDispatching, setIsDispatching] = useState<boolean>(false);
+  const [dispatchError, setDispatchError] = useState<string | null>(null);
+  const [confirmedIncidentId, setConfirmedIncidentId] = useState<string | null>(null);
   const [cameraMode, setCameraMode] = useState<'patrol' | 'webcam'>('patrol');
   const [speedVariation, setSpeedVariation] = useState<number>(0);
 
@@ -312,6 +316,8 @@ export default function LiveDemoPage({ onNavigate }: Props) {
       setEvidencePacket(packet);
       setIsCapturing(false);
       setDispatched(false);
+      setDispatchError(null);
+      setConfirmedIncidentId(null);
     }, 400);
   }, [activeScenario, isCapturing, soundEnabled]);
 
@@ -330,13 +336,61 @@ export default function LiveDemoPage({ onNavigate }: Props) {
     return () => clearInterval(interval);
   }, [autoPatrol, handleCaptureEvidence]);
 
-  const handleDispatch = () => {
-    setDispatched(true);
-    if (evidencePacket) {
+  const handleDispatch = async () => {
+    if (!evidencePacket || isDispatching) return;
+
+    setIsDispatching(true);
+    setDispatchError(null);
+
+    // Map the evidence packet to the backend incident shape
+    const now = new Date();
+    const isoTimestamp = now.toISOString().replace('T', ' ').slice(0, 19);
+
+    // Derive a severity string the backend understands (Title-case)
+    const severityMap: Record<string, string> = {
+      CRITICAL: 'Critical',
+      HIGH: 'High',
+      MEDIUM: 'Medium',
+      LOW: 'Low',
+    };
+
+    const payload = {
+      id: evidencePacket.id,
+      violation: evidencePacket.violation,
+      vehicleNumber: evidencePacket.licensePlate,
+      location: evidencePacket.location,
+      status: 'Pending Review',
+      severity: severityMap[evidencePacket.severity] ?? 'High',
+      timestamp: isoTimestamp,
+    };
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/incidents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.message ?? `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      const serverId: string = data?.incident?.id ?? evidencePacket.id;
+
+      setConfirmedIncidentId(serverId);
+      setDispatched(true);
       setEvidencePacket({
         ...evidencePacket,
-        status: 'DISPATCHED_TO_COMMAND'
+        id: serverId,
+        status: 'DISPATCHED_TO_COMMAND',
       });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setDispatchError(`Dispatch failed: ${message}. Check your connection and try again.`);
+    } finally {
+      setIsDispatching(false);
     }
   };
 
@@ -387,7 +441,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
         </div>
 
         {/* Controls & Scenario Picker */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {/* Audio toggle */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
@@ -434,10 +488,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
       </div>
 
       {/* Main Grid: Viewfinder (Left) & Evidence Docket (Right) */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) minmax(360px, 0.95fr)',
-        gap: 16, padding: 18, flex: 1
-      }}>
+      <div className="live-demo-grid">
         {/* LEFT COLUMN: Vehicle Dashcam Viewfinder & HUD */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Scenario selector bar */}
@@ -452,6 +503,8 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                   setActiveScenarioId(scen.id);
                   setEvidencePacket(null);
                   setDispatched(false);
+                  setDispatchError(null);
+                  setConfirmedIncidentId(null);
                 }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8,
@@ -509,7 +562,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
             }} />
 
             {/* HUD Top-Bar: Patrol Cruiser Telemetry */}
-            <div style={{
+            <div className="hud-top-bar" style={{
               position: 'absolute', top: 12, left: 14, right: 14,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               fontFamily: 'var(--font-mono)', fontSize: '0.74rem', color: '#38bdf8',
@@ -629,7 +682,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
             </div>
 
             {/* Bottom HUD: Telemetry readouts */}
-            <div style={{
+            <div className="hud-bottom-bar" style={{
               position: 'absolute', bottom: 12, left: 14, right: 14,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'rgba(255,255,255,0.85)',
@@ -650,7 +703,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
           </div>
 
           {/* Action Toolbar Below Viewfinder */}
-          <div style={{
+          <div className="live-action-toolbar" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             background: 'var(--bg-card)', padding: '12px 16px', borderRadius: 8,
             border: '1px solid var(--border)', flexWrap: 'wrap', gap: 10
@@ -899,28 +952,103 @@ export default function LiveDemoPage({ onNavigate }: Props) {
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+                {/* Error banner */}
+                {dispatchError && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                    background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239,68,68,0.4)',
+                    borderRadius: 8, padding: '10px 14px', fontSize: '0.78rem', color: '#fca5a5'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                      <span>{dispatchError}</span>
+                    </div>
+                    <button
+                      onClick={handleDispatch}
+                      disabled={isDispatching}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.25)', border: '1px solid rgba(239,68,68,0.6)',
+                        color: '#ffffff', borderRadius: 4, padding: '4px 10px', fontSize: '0.72rem',
+                        cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Retry Dispatch
+                    </button>
+                  </div>
+                )}
+
                 {!dispatched ? (
                   <button
                     onClick={handleDispatch}
+                    disabled={isDispatching}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      background: 'var(--emerald)', color: '#fff', border: 'none',
-                      padding: '11px', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem',
-                      cursor: 'pointer', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)'
+                      background: isDispatching
+                        ? 'rgba(16, 185, 129, 0.5)'
+                        : 'var(--emerald)',
+                      color: '#fff', border: 'none',
+                      padding: '12px', borderRadius: 8, fontWeight: 700, fontSize: '0.86rem',
+                      cursor: isDispatching ? 'not-allowed' : 'pointer',
+                      boxShadow: isDispatching ? 'none' : '0 4px 14px rgba(16, 185, 129, 0.4)',
+                      transition: 'all 0.2s ease',
+                      opacity: isDispatching ? 0.75 : 1,
                     }}
                   >
-                    <Send size={16} />
-                    <span>Dispatch E-Challan to Command Center & Parivahan</span>
+                    {isDispatching ? (
+                      <>
+                        <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
+                        <span>Dispatching to Command Center & Supabase…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        <span>Dispatch E-Challan to Command Center & Parivahan</span>
+                      </>
+                    )}
                   </button>
                 ) : (
                   <div style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    background: 'rgba(16, 185, 129, 0.15)', border: '1px solid var(--emerald)',
-                    color: 'var(--emerald)', padding: '10px', borderRadius: 8,
-                    fontSize: '0.82rem', fontWeight: 700
+                    display: 'flex', flexDirection: 'column', gap: 8,
+                    background: 'rgba(16, 185, 129, 0.14)', border: '1px solid var(--emerald)',
+                    borderRadius: 8, padding: '14px 16px',
+                    boxShadow: '0 0 20px rgba(16, 185, 129, 0.15)'
                   }}>
-                    <CheckCircle2 size={16} />
-                    <span>E-Challan Filed & Synchronized with Hyderabad Police HQ</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--emerald)', fontSize: '0.88rem', fontWeight: 800, letterSpacing: '0.5px' }}>
+                        <CheckCircle2 size={18} />
+                        <span>DISPATCHED TO COMMAND CENTER</span>
+                      </div>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: 'rgba(16, 185, 129, 0.25)', color: 'var(--emerald)' }}>
+                        LIVE SUPABASE SYNC
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                      Incident Docket #{' '}
+                      <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--cyan)', fontWeight: 700 }}>
+                        {confirmedIncidentId || evidencePacket.id}
+                      </span>
+                      {' '}successfully filed and synchronized with Hyderabad Traffic Police HQ.
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                      <button
+                        onClick={() => onNavigate?.('overview')}
+                        className="btn btn-primary btn-sm"
+                        style={{ flex: 1, justifyContent: 'center', gap: 6, fontSize: '0.78rem' }}
+                      >
+                        <Eye size={13} />
+                        <span>View in Command Center →</span>
+                      </button>
+                      <button
+                        onClick={() => onNavigate?.('incidents')}
+                        className="btn btn-secondary btn-sm"
+                        style={{ flex: 1, justifyContent: 'center', gap: 6, fontSize: '0.78rem' }}
+                      >
+                        <span>View in Incident Feed →</span>
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -929,13 +1057,16 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                     onClick={() => onNavigate?.('incidents')}
                     style={{
                       flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      background: 'var(--bg-surface)', border: '1px solid var(--border)',
-                      color: 'var(--text-primary)', padding: '8px', borderRadius: 6,
-                      fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600
+                      background: dispatched ? 'rgba(59,130,246,0.15)' : 'var(--bg-surface)',
+                      border: `1px solid ${dispatched ? 'var(--brand)' : 'var(--border)'}`,
+                      color: dispatched ? 'var(--brand-bright)' : 'var(--text-primary)',
+                      padding: '8px', borderRadius: 6,
+                      fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600,
+                      transition: 'all 0.2s ease'
                     }}
                   >
                     <Eye size={14} />
-                    <span>View in Incident Feed</span>
+                    <span>{dispatched ? 'View New Incident in Feed →' : 'View in Incident Feed'}</span>
                   </button>
 
                   <button

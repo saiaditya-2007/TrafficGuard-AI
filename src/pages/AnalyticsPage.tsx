@@ -59,7 +59,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Summary row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+      <div className="analytics-summary-grid">
         {[
           { label: 'Total Violations', value: totalViolations, color: 'var(--brand)' },
           { label: 'Weekly Avg/Day', value: Math.round(totalViolations / 7), color: 'var(--cyan)' },
@@ -75,7 +75,7 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+      <div className="analytics-charts-grid">
         {/* Violations by Type */}
         <ChartCard title="Violations by Type">
           <ResponsiveContainer width="100%" height="100%">

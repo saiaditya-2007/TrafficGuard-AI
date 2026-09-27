@@ -59,7 +59,7 @@ export default function PrivacyPage() {
         padding: '20px 24px', marginBottom: 20,
         background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(6,182,212,0.08) 100%)',
         border: '1px solid rgba(16,185,129,0.3)', borderRadius: 'var(--radius-lg)',
-        display: 'flex', gap: 20, alignItems: 'center'
+        display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap'
       }}>
         <div style={{
           width: 60, height: 60, borderRadius: '50%', background: 'var(--emerald-dim)',
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
         }}>
           <Shield size={28} color="var(--emerald)" />
         </div>
-        <div>
+        <div style={{ flex: '1 1 260px' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 6 }}>Privacy-First Design</h3>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 700 }}>
             TrafficGuard AI is designed to minimize unnecessary personal information and restrict sensitive evidence to authorized personnel.
@@ -79,7 +79,7 @@ export default function PrivacyPage() {
       </div>
 
       {/* Feature grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: 14, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 14, marginBottom: 20 }}>
         {features.map(f => (
           <div key={f.title} className="privacy-feature-card" style={{ flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

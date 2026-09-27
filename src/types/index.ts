@@ -24,11 +24,18 @@ export type ViolationType =
   | 'Triple Riding'
   | 'Seat Belt Violation'
   | 'Lane Violation'
-  | 'Overspeeding';
+  | 'Overspeeding'
+  | 'Using Mobile Phone';
 
 export type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
-export type IncidentStatus = 'Pending Review' | 'Verified' | 'Rejected' | 'Under Investigation' | 'Resolved';
+export type IncidentStatus =
+  | 'Pending Review'
+  | 'Verified'
+  | 'Rejected'
+  | 'Under Investigation'
+  | 'Resolved'
+  | 'More Evidence Requested';
 
 export interface TrustBreakdown {
   imageQuality: number;

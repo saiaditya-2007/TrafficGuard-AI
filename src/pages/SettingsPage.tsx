@@ -53,7 +53,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 16 }}>
         {sections.map(section => (
           <div key={section.title} className="card" style={{ overflow: 'hidden' }}>
             <div className="card-header">

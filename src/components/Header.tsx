@@ -1,4 +1,4 @@
-import { Shield } from 'lucide-react';
+import { Shield, Menu, X } from 'lucide-react';
 import type { NavPage } from '../types';
 
 interface Props {
@@ -8,9 +8,20 @@ interface Props {
   setShowNotifications: (v: boolean) => void;
   unreadCount: number;
   clock: string;
+  mobileMenuOpen?: boolean;
+  setMobileMenuOpen?: (v: boolean) => void;
 }
 
-export default function Header({ page, onNavigate: _onNavigate, showNotifications, setShowNotifications, unreadCount, clock }: Props) {
+export default function Header({
+  page,
+  onNavigate: _onNavigate,
+  showNotifications,
+  setShowNotifications,
+  unreadCount,
+  clock,
+  mobileMenuOpen = false,
+  setMobileMenuOpen
+}: Props) {
   const greetings: Record<string, { title: string; sub: string }> = {
     overview:   { title: 'Good evening, Officer', sub: 'Hyderabad Road Safety Command Center' },
     incidents:  { title: 'Live Incident Feed', sub: 'Real-time incoming violations across Hyderabad' },
@@ -30,20 +41,31 @@ export default function Header({ page, onNavigate: _onNavigate, showNotification
 
   return (
     <header className="header">
-      <div className="header-greeting">
-        <h2>{g.title}</h2>
-        <p>{g.sub}</p>
+      <div className="header-left">
+        {setMobileMenuOpen && (
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          >
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+        )}
+        <div className="header-greeting">
+          <h2>{g.title}</h2>
+          <p>{g.sub}</p>
+        </div>
       </div>
 
       <div className="header-right">
         <div className="status-indicator">
           <span className="status-dot" />
-          All Systems Operational
+          <span className="status-indicator-text">All Systems Operational</span>
         </div>
 
-        <div className="mono" style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{clock}</div>
+        <div className="mono header-clock" style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{clock}</div>
 
-        <span className="demo-badge">DEMO MODE</span>
+        <span className="demo-badge header-badge">DEMO MODE</span>
 
         <button
           className="icon-btn"
@@ -57,7 +79,7 @@ export default function Header({ page, onNavigate: _onNavigate, showNotification
           {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
         </button>
 
-        <button className="icon-btn" title="Officer profile">
+        <button className="icon-btn header-officer-btn" title="Officer profile">
           <Shield size={15} />
         </button>
       </div>

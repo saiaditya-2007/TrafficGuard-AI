@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import { ArrowRight, Shield, Camera, Brain, Map, ChevronDown, Network, Zap, Eye, TrendingUp } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, Shield, Camera, Brain, Map, ChevronDown, Network, Zap, Eye, TrendingUp, User } from 'lucide-react';
 
 interface Props {
   onLaunch: () => void;
   onCitizen: () => void;
   onLiveDemo?: () => void;
+  onOfficerLogin?: () => void;
 }
 
-export default function LandingPage({ onLaunch, onCitizen, onLiveDemo }: Props) {
+export default function LandingPage({ onLaunch, onCitizen, onLiveDemo, onOfficerLogin }: Props) {
   const [activeStep, setActiveStep] = useState<number | null>(null);
 
   const steps = [
@@ -77,19 +78,27 @@ export default function LandingPage({ onLaunch, onCitizen, onLiveDemo }: Props) 
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="landing-nav-actions">
           <button
             className="btn btn-sm"
             style={{
               background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)',
-              color: '#ef4444', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6
+              color: '#ef4444', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6,
+              whiteSpace: 'nowrap'
             }}
             onClick={onLiveDemo || onLaunch}
           >
-            <span className="badge-live-pulse">LIVE</span> Live Patrol Demo
+            <span className="badge-live-pulse">LIVE</span> Patrol Demo
           </button>
-          <button className="btn btn-secondary btn-sm" onClick={onCitizen}>Citizen Portal</button>
-          <button className="btn btn-primary btn-sm" onClick={onLaunch}>
+          <button className="btn btn-secondary btn-sm" onClick={onCitizen} style={{ whiteSpace: 'nowrap' }}>Citizen</button>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={onOfficerLogin || onLaunch}
+            style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}
+          >
+            <User size={13} /> Officer Sign In
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={onOfficerLogin || onLaunch} style={{ whiteSpace: 'nowrap' }}>
             Command Center <ArrowRight size={13} />
           </button>
         </div>
@@ -129,7 +138,7 @@ export default function LandingPage({ onLaunch, onCitizen, onLiveDemo }: Props) 
           </div>
 
           {/* Stats row */}
-          <div style={{ display: 'flex', gap: 24, marginTop: 40 }}>
+          <div className="hero-stats-row">
             {[
               { val: '3,842', label: 'Active Cameras' },
               { val: '1,284', label: 'Incidents This Week' },

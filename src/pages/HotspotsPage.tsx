@@ -57,7 +57,7 @@ export default function HotspotsPage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 16, minHeight: 480 }}>
+        <div className="hotspots-grid">
           {/* Map */}
           <div className="card" style={{ overflow: 'hidden' }}>
             <div className="card-header">

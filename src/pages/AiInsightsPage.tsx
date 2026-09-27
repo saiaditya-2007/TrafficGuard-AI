@@ -36,7 +36,7 @@ export default function AiInsightsPage() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(480px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))', gap: 16 }}>
         {AI_INSIGHTS.map(insight => (
           <div key={insight.id} className="insight-card">
             {/* Header */}
