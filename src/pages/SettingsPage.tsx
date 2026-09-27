@@ -8,7 +8,7 @@ export default function SettingsPage() {
       icon: <Sliders size={16} />,
       items: [
         { label: 'Color Theme', value: 'Dark (Command Center)', type: 'select' },
-        { label: 'Map Style', value: 'Dark (CartoDB)', type: 'select' },
+        { label: 'Map Style', value: 'Standard (OpenStreetMap)', type: 'select' },
         { label: 'Default Zoom Level', value: '12', type: 'input' },
         { label: 'Auto-Refresh Feed', value: 'Every 30 seconds', type: 'select' },
       ],

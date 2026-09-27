@@ -46,8 +46,9 @@ export default function App() {
 
   const unreadCount = 2;
 
-  const handleNavigate = (page: NavPage) => {
-    setActivePage(page);
+  const handleNavigate = (page: string) => {
+    const clean = page.replace(/^\//, '') as NavPage;
+    setActivePage(clean);
     setShowNotifications(false);
     setMobileMenuOpen(false);
   };
