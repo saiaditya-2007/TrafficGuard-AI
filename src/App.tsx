@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import './styles/index.css';
 
+import OpeningAnimation from './components/OpeningAnimation';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import NotificationDrawer from './components/NotificationDrawer';
@@ -37,6 +38,7 @@ function useClock() {
 }
 
 export default function App() {
+  const [animationFinished, setAnimationFinished] = useState(false);
   const [mode, setMode] = useState<AppMode>('landing');
   const [activePage, setActivePage] = useState<NavPage>('overview');
   const [showNotifications, setShowNotifications] = useState(false);
@@ -45,6 +47,10 @@ export default function App() {
   const clock = useClock();
 
   const unreadCount = 2;
+
+  const handleAnimationComplete = useCallback(() => {
+    setAnimationFinished(true);
+  }, []);
 
   const handleNavigate = (page: string) => {
     const clean = page.replace(/^\//, '') as NavPage;
@@ -79,43 +85,6 @@ export default function App() {
     setMobileMenuOpen(false);
   };
 
-  // Landing mode
-  if (mode === 'landing') {
-    return (
-      <LandingPage
-        onLaunch={handleLaunchCommandCenter}
-        onOfficerLogin={() => setMode('login')}
-        onCitizen={handleGoToCitizen}
-        onLiveDemo={() => {
-          setMode('police');
-          setActivePage('live-demo');
-          setShowNotifications(false);
-        }}
-      />
-    );
-  }
-
-  // Sign In mode
-  if (mode === 'login') {
-    return (
-      <SignInPage
-        onSuccess={(loggedOfficer) => {
-          setOfficer(loggedOfficer);
-          setMode('police');
-          setActivePage('overview');
-          setShowNotifications(false);
-        }}
-        onBackToLanding={handleGoToLanding}
-        onGoToCitizen={handleGoToCitizen}
-      />
-    );
-  }
-
-  // Citizen mode
-  if (mode === 'citizen') {
-    return <CitizenPage onBack={handleGoToLanding} />;
-  }
-
   // Police command center mode
   const renderPage = () => {
     switch (activePage) {
@@ -136,37 +105,69 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell">
-      <Sidebar
-        activePage={activePage}
-        onNavigate={handleNavigate}
-        onLanding={handleGoToLanding}
-        mobileOpen={mobileMenuOpen}
-        onCloseMobile={() => setMobileMenuOpen(false)}
-        officer={officer}
-      />
+    <>
+      {!animationFinished && (
+        <OpeningAnimation onComplete={handleAnimationComplete} />
+      )}
 
-      <div className="main-area">
-        <div style={{ position: 'relative' }}>
-          <Header
-            page={activePage}
+      {mode === 'landing' ? (
+        <LandingPage
+          onLaunch={handleLaunchCommandCenter}
+          onOfficerLogin={() => setMode('login')}
+          onCitizen={handleGoToCitizen}
+          onLiveDemo={() => {
+            setMode('police');
+            setActivePage('live-demo');
+            setShowNotifications(false);
+          }}
+        />
+      ) : mode === 'login' ? (
+        <SignInPage
+          onSuccess={(loggedOfficer) => {
+            setOfficer(loggedOfficer);
+            setMode('police');
+            setActivePage('overview');
+            setShowNotifications(false);
+          }}
+          onBackToLanding={handleGoToLanding}
+          onGoToCitizen={handleGoToCitizen}
+        />
+      ) : mode === 'citizen' ? (
+        <CitizenPage onBack={handleGoToLanding} />
+      ) : (
+        <div className="app-shell">
+          <Sidebar
+            activePage={activePage}
             onNavigate={handleNavigate}
-            showNotifications={showNotifications}
-            setShowNotifications={setShowNotifications}
-            unreadCount={unreadCount}
-            clock={clock}
-            mobileMenuOpen={mobileMenuOpen}
-            setMobileMenuOpen={setMobileMenuOpen}
+            onLanding={handleGoToLanding}
+            mobileOpen={mobileMenuOpen}
+            onCloseMobile={() => setMobileMenuOpen(false)}
+            officer={officer}
           />
-          {showNotifications && (
-            <NotificationDrawer onClose={() => setShowNotifications(false)} />
-          )}
-        </div>
 
-        <div className="page-content" style={{ padding: 0, flex: 1 }}>
-          {renderPage()}
+          <div className="main-area">
+            <div style={{ position: 'relative' }}>
+              <Header
+                page={activePage}
+                onNavigate={handleNavigate}
+                showNotifications={showNotifications}
+                setShowNotifications={setShowNotifications}
+                unreadCount={unreadCount}
+                clock={clock}
+                mobileMenuOpen={mobileMenuOpen}
+                setMobileMenuOpen={setMobileMenuOpen}
+              />
+              {showNotifications && (
+                <NotificationDrawer onClose={() => setShowNotifications(false)} />
+              )}
+            </div>
+
+            <div className="page-content" style={{ padding: 0, flex: 1 }}>
+              {renderPage()}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 }
