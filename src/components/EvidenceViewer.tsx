@@ -608,7 +608,8 @@ export default function EvidenceViewer({ incident, onClose, onVerify, onStatusUp
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>{k}</span>
                   <span style={{
                     fontSize: '0.75rem', fontWeight: 600, textAlign: 'right',
-                    color: k === 'Priority' ? severityColor : 'var(--text-primary)'
+                    color: k === 'Priority' ? severityColor : 'var(--text-primary)',
+                    wordBreak: 'break-word', minWidth: 0
                   }}>{v}</span>
                 </div>
               ))}

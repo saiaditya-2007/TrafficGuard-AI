@@ -483,7 +483,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
     : cruisingSpeed;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto', background: 'var(--bg-base)' }}>
+    <div className="live-demo-page-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto', background: 'var(--bg-base)' }}>
       {/* Shutter flash overlay */}
       {shutterFlash && (
         <div style={{
@@ -494,7 +494,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
       )}
 
       {/* Top Banner / Mode Header */}
-      <div style={{
+      <div className="live-demo-top-banner" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '12px 24px', background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
         flexWrap: 'wrap', gap: 12
@@ -509,8 +509,8 @@ export default function LiveDemoPage({ onNavigate }: Props) {
             <Radio size={20} className="pulse-slow" />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontWeight: 700, fontSize: '1.1rem', color: '#fff', letterSpacing: '-0.02em' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 700, fontSize: '1.1rem', color: '#fff', letterSpacing: '-0.02em', wordBreak: 'break-word' }}>
                 AI Patrol Unit — Live Dashcam & ANPR Evidence Capture
               </span>
               <span style={{
@@ -576,9 +576,9 @@ export default function LiveDemoPage({ onNavigate }: Props) {
       {/* Main Grid: Viewfinder (Left) & Evidence Docket (Right) */}
       <div className="live-demo-grid">
         {/* LEFT COLUMN: Vehicle Dashcam Viewfinder & HUD */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="live-demo-left-col" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Scenario selector bar */}
-          <div style={{
+          <div className="scenario-selector-bar" style={{
             display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4,
             borderBottom: '1px solid var(--border)'
           }}>
@@ -614,7 +614,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
           </div>
 
           {/* VIEWPORT CONTAINER */}
-          <div style={{
+          <div className="live-viewport-container" style={{
             position: 'relative', borderRadius: 12, overflow: 'hidden',
             border: '2px solid rgba(6, 182, 212, 0.35)', background: '#020617',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 40px rgba(6, 182, 212, 0.05)',
@@ -643,7 +643,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
 
             {/* Status indicator when awaiting vehicle detection */}
             {(stage === 'searching' || cameraMode === 'webcam') && (
-              <div style={{
+              <div className="patrol-radar-status-badge" style={{
                 position: 'absolute', top: 54, left: '50%', transform: 'translateX(-50%)',
                 background: 'rgba(2, 6, 23, 0.88)', border: '1px solid rgba(56, 189, 248, 0.4)',
                 color: '#38bdf8', padding: '6px 18px', borderRadius: 20,
@@ -651,7 +651,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                 display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(6px)',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.6)', pointerEvents: 'none', zIndex: 10
               }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#38bdf8', animation: 'pulse-slow 1.5s infinite' }} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#38bdf8', animation: 'pulse-slow 1.5s infinite', flexShrink: 0 }} />
                 <span>
                   {cameraMode === 'webcam'
                     ? 'WEBCAM ACTIVE — AWAITING VEHICLE DETECTION'
@@ -734,7 +734,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                 <div style={{ position: 'absolute', bottom: -3, right: -3, width: 12, height: 12, borderBottom: '3px solid #fff', borderRight: '3px solid #fff' }} />
 
                 {/* Target Label */}
-                <div style={{
+                <div className="live-target-label" style={{
                   position: 'absolute', top: -26, left: 0,
                   background: stage === 'violation_confirmed' ? 'rgba(239, 68, 68, 0.9)' : 'rgba(6, 182, 212, 0.9)',
                   color: '#fff',
@@ -783,7 +783,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                 )}
 
                 {/* ANPR decoded label hanging underneath plate */}
-                <div style={{
+                <div className="live-plate-label" style={{
                   position: 'absolute', bottom: -28,
                   background: 'rgba(2, 6, 23, 0.95)', border: '1px solid #06b6d4',
                   color: '#fff', fontFamily: 'var(--font-mono)', fontSize: '0.72rem',
@@ -877,6 +877,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
             <button
               onClick={handleCaptureEvidence}
               disabled={isCapturing || stage !== 'violation_confirmed' || cameraMode === 'webcam'}
+              className="primary-capture-btn"
               style={{
                 display: 'flex', alignItems: 'center', gap: 10,
                 background: (stage === 'violation_confirmed' && cameraMode !== 'webcam')
@@ -892,7 +893,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                 transition: 'all 0.15s ease'
               }}
             >
-              <Camera size={18} />
+              <Camera size={18} style={{ flexShrink: 0 }} />
               <span>
                 {isCapturing ? 'CAPTURING EVIDENCE...' :
                  cameraMode === 'webcam' ? 'NO VEHICLE DETECTED' :
@@ -910,7 +911,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
             border: '1px solid var(--border)', fontSize: '0.82rem', color: 'var(--text-secondary)',
             display: 'flex', flexDirection: 'column', gap: 6
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
               <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Sector Context & Incident Synopsis</span>
               <span className="badge badge-critical">{activeScenario.violationType}</span>
             </div>
@@ -921,7 +922,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
         </div>
 
         {/* RIGHT COLUMN: RECORDED EVIDENCE PACKET & E-CHALLAN */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="live-demo-right-col" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {evidencePacket ? (
             <div style={{
               background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)',
@@ -929,20 +930,22 @@ export default function LiveDemoPage({ onNavigate }: Props) {
               boxShadow: '0 4px 24px rgba(0,0,0,0.25)'
             }}>
               {/* Evidence Packet Header */}
-              <div style={{
+              <div className="evidence-packet-header" style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                paddingBottom: 12, borderBottom: '1px solid var(--border)'
+                paddingBottom: 12, borderBottom: '1px solid var(--border)',
+                flexWrap: 'wrap', gap: 10
               }}>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 800, fontSize: '1rem', color: '#fff', wordBreak: 'break-word' }}>
                       Evidence Packet #{evidencePacket.id}
                     </span>
                     <span style={{
                       fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 4,
                       background: dispatched ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
                       color: dispatched ? 'var(--emerald)' : '#ef4444',
-                      border: `1px solid ${dispatched ? 'var(--emerald)' : 'rgba(239,68,68,0.4)'}`
+                      border: `1px solid ${dispatched ? 'var(--emerald)' : 'rgba(239,68,68,0.4)'}`,
+                      whiteSpace: 'nowrap'
                     }}>
                       {dispatched ? 'DISPATCHED' : 'READY FOR DISPATCH'}
                     </span>
@@ -968,7 +971,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                 }}>
                   3-Point Synchronized Evidence Captures
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                <div className="evidence-captures-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                   {/* Photo 1: Patrol Cruiser Perspective */}
                   <div style={{
                     borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)',
@@ -1052,7 +1055,8 @@ export default function LiveDemoPage({ onNavigate }: Props) {
               {/* ANPR Verification Badge */}
               <div style={{
                 background: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.3)',
-                borderRadius: 8, padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                borderRadius: 8, padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                flexWrap: 'wrap', gap: 8
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Car size={20} color="var(--cyan)" />
@@ -1074,7 +1078,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
               </div>
 
               {/* Telemetry & Cryptographic Verification */}
-              <div style={{
+              <div className="evidence-telemetry-grid" style={{
                 display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
                 fontSize: '0.74rem', color: 'var(--text-secondary)'
               }}>
@@ -1102,7 +1106,8 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                   <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
                     background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239,68,68,0.4)',
-                    borderRadius: 8, padding: '10px 14px', fontSize: '0.78rem', color: '#fca5a5'
+                    borderRadius: 8, padding: '10px 14px', fontSize: '0.78rem', color: '#fca5a5',
+                    flexWrap: 'wrap'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <AlertCircle size={15} style={{ flexShrink: 0 }} />
@@ -1126,6 +1131,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                   <button
                     onClick={handleDispatch}
                     disabled={isDispatching}
+                    className="dispatch-challan-btn"
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                       background: isDispatching
@@ -1158,7 +1164,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                     borderRadius: 8, padding: '14px 16px',
                     boxShadow: '0 0 20px rgba(16, 185, 129, 0.15)'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--emerald)', fontSize: '0.88rem', fontWeight: 800, letterSpacing: '0.5px' }}>
                         <CheckCircle2 size={18} />
                         <span>DISPATCHED TO COMMAND CENTER</span>
@@ -1176,7 +1182,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                       {' '}successfully filed and synchronized with Hyderabad Traffic Police HQ.
                     </div>
 
-                    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                    <div className="dispatched-actions-row" style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                       <button
                         onClick={() => onNavigate?.('overview')}
                         className="btn btn-primary btn-sm"
@@ -1196,7 +1202,7 @@ export default function LiveDemoPage({ onNavigate }: Props) {
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="secondary-actions-row" style={{ display: 'flex', gap: 8 }}>
                   <button
                     onClick={() => onNavigate?.('incidents')}
                     style={{
